@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摸金校尉 - 古墓寻宝</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-image: url('https://picsum.photos/id/1074/1920/1080');
+            background-blend-mode: overlay;
+            background-size: cover;
+            background-attachment: fixed;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            border: 2px solid #ffd700;
+            backdrop-filter: blur(8px);
+        }
+
+        /* 页面切换样式 */
+        .game-page {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .game-page.active {
+            display: flex;
+        }
+
+        /* 标题样式 */
+        .game-title {
+            text-align: center;
+            color: #ffd700;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ffd700;
+        }
+        .game-subtitle {
+            text-align: center;
+            color: #ff9800;
+            margin-bottom: 20px;
+        }
+
+        /* 选择器样式 */
+        .selector-group {
+            margin: 15px 0;
+            border: 1px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .selector-title {
+            color: #ff9800;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #ffd700;
+            padding-bottom: 5px;
+        }
+        .option-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .option-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .option-item:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+        }
+        .option-item.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #ffd700, #ff9800);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ffd700;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        /* 游戏主界面样式 */
+        .game-status {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status-item {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        /* 古墓探索区域 */
+        .tomb-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .tomb-cell {
+            background: rgba(50, 30, 0, 0.7);
+            border: 1px solid #ff9800;
+            border-radius: 8px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tomb-cell:hover {
+            background: rgba(100, 50, 0, 0.8);
+            transform: translateY(-5px);
+        }
+        .tomb-cell.found {
+            background: rgba(0, 150, 0, 0.5);
+            border-color: #00ff00;
+        }
+
+        /* 物品变卖界面 */
+        .inventory {
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px dashed #ffd700;
+        }
+        .sell-btn {
+            background: linear-gradient(45deg, #4caf50, #8bc34a);
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 25px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 1. 角色选择页面 -->
+        <div class="game-page active" id="character-page">
+            <h1 class="game-title">摸金校尉 - 角色创建</h1>
+            <p class="game-subtitle">选择你的身份、服装和作战工具</p>
+
+            <!-- 人物选择 -->
+            <div class="selector-group">
+                <h3 class="selector-title">选择人物职业</h3>
+                <div class="option-list" id="character-list">
+                    <div class="option-item selected" data-type="character" data-value="doctor">医生 (擅长急救)</div>
+                    <div class="option-item" data-type="character" data-value="miner">矿工 (擅长挖掘)</div>
+                    <div class="option-item" data-type="character" data-value="scholar">学者 (识别古董)</div>
+                </div>
+            </div>
+
+            <!-- 服装选择 -->
+            <div class="selector-group">
+                <h3 class="selector-title">选择服装</h3>
+                <div class="option-list" id="costume-list">
+                    <div class="option-item selected" data-type="costume" data-value="basic">基础摸金服</div>
+                    <div class="option-item" data-type="costume" data-value="armor">防刺护甲</div>
+                    <div class="option-item" data-type="costume" data-value="stealth">潜行夜行衣</div>
+                </div>
+            </div>
+
+            <!-- 工具选择 -->
+            <div class="selector-group">
+                <h3 class="selector-title">选择作战工具 (最多选3个)</h3>
+                <div class="option-list" id="tool-list">
+                    <div class="option-item selected" data-type="tool" data-value="shovel">工兵铲 (挖掘)</div>
+                    <div class="option-item selected" data-type="tool" data-value="talisman">摸金符 (辟邪)</div>
+                    <div class="option-item" data-type="tool" data-value="firstaid">急救包 (回血)</div>
+                    <div class="option-item" data-type="tool" data-value="sword">桃木剑 (驱邪)</div>
+                    <div class="option-item" data-type="tool" data-value="lantern">探照灯 (照明)</div>
+                    <div class="option-item" data-type="tool" data-value="rope">登山绳 (攀爬)</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="goToPage('map-page')">下一步 - 选择地图</button>
+            </div>
+        </div>
+
+        <!-- 2. 地图难度选择页面 -->
+        <div class="game-page" id="map-page">
+            <h1 class="game-title">摸金校尉 - 选择探险</h1>
+            <p class="game-subtitle">选择地图和难度，开始古墓探险</p>
+
+            <!-- 地图选择 -->
+            <div class="selector-group">
+                <h3 class="selector-title">选择游戏地图</h3>
+                <div class="option-list" id="map-list">
+                    <div class="option-item selected" data-type="map" data-value="shanxi">山西晋墓</div>
+                    <div class="option-item" data-type="map" data-value="sichuan">四川蜀墓</div>
+                    <div class="option-item" data-type="map" data-value="xinjiang">新疆楼兰古墓</div>
+                </div>
+            </div>
+
+            <!-- 难度选择 -->
+            <div class="selector-group">
+                <h3 class="selector-title">选择游戏难度</h3>
+                <div class="option-list" id="difficulty-list">
+                    <div class="option-item selected" data-type="difficulty" data-value="easy">简单 (新手摸金)</div>
+                    <div class="option-item" data-type="difficulty" data-value="medium">中等 (资深校尉)</div>
+                    <div class="option-item" data-type="difficulty" data-value="hard">困难 (摸金掌门)</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="goToPage('character-page')">返回</button>
+                <button class="btn" onclick="startGame()">开始探险</button>
+            </div>
+        </div>
+
+        <!-- 3. 游戏主界面 -->
+        <div class="game-page" id="game-page">
+            <h1 class="game-title">摸金校尉 - 古墓探险</h1>
+            
+            <!-- 游戏状态 -->
+            <div class="game-status">
+                <div class="status-item">金币: <span id="gold">0</span></div>
+                <div class="status-item">生命值: <span id="hp">100</span></div>
+                <div class="status-item">当前地图: <span id="current-map">山西晋墓</span></div>
+                <div class="status-item">难度: <span id="current-difficulty">简单</span></div>
+            </div>
+
+            <!-- 古墓探索区域 -->
+            <h3 class="selector-title">古墓区域 (点击探索)</h3>
+            <div class="tomb-area" id="tomb-area">
+                <!-- 动态生成古墓格子 -->
+            </div>
+
+            <!-- 功能按钮 -->
+            <div class="btn-group">
+                <button class="btn" onclick="goToPage('sell-page')">变卖宝物</button>
+                <button class="btn" onclick="restartGame()">重新开始</button>
+            </div>
+        </div>
+
+        <!-- 4. 变卖宝物页面 -->
+        <div class="game-page" id="sell-page">
+            <h1 class="game-title">摸金校尉 - 变卖宝物</h1>
+            <p class="game-subtitle">出售从古墓获得的物品换取金币</p>
+
+            <div class="selector-group">
+                <h3 class="selector-title">你的宝物</h3>
+                <div class="inventory" id="inventory">
+                    <!-- 动态生成物品列表 -->
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="goToPage('game-page')">返回探险</button>
+                <button class="btn" onclick="sellAllItems()">全部变卖</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 探索结果弹窗 -->
+    <div class="modal" id="result-modal">
+        <div class="modal-content">
+            <h3 id="modal-title" style="color: #ffd700; margin-bottom: 15px;">发现宝物！</h3>
+            <p id="modal-content" style="margin-bottom: 20px;">你找到了一件青铜镜，价值50金币！</p>
+            <button class="btn" onclick="closeModal()">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let gameData = {
+            character: "doctor",
+            costume: "basic",
+            tools: ["shovel", "talisman"],
+            map: "shanxi",
+            difficulty: "easy",
+            gold: 0,
+            hp: 100,
+            inventory: []
+        };
+
+        // 物品配置
+        const itemConfig = {
+            // 普通物品
+            bronze: { name: "青铜镜", value: 50, rarity: "普通" },
+            porcelain: { name: "青花瓷", value: 150, rarity: "稀有" },
+            jade: { name: "和田玉璧", value: 300, rarity: "珍贵" },
+            goldware: { name: "金器摆件", value: 500, rarity: "极品" },
+            // 机关/陷阱
+            trap: { name: "触发机关", value: 0, damage: 20, rarity: "危险" },
+            poison: { name: "毒雾", value: 0, damage: 15, rarity: "危险" },
+            empty: { name: "空墓室", value: 0, damage: 0, rarity: "普通" }
+        };
+
+        // 难度系数
+        const difficultyConfig = {
+            easy: { trapRate: 0.2, rareRate: 0.3, hp: 100 },
+            medium: { trapRate: 0.4, rareRate: 0.2, hp: 80 },
+            hard: { trapRate: 0.6, rareRate: 0.1, hp: 60 }
+        };
+
+        // 地图名称映射
+        const mapNameMap = {
+            shanxi: "山西晋墓",
+            sichuan: "四川蜀墓",
+            xinjiang: "新疆楼兰古墓"
+        };
+
+        // 难度名称映射
+        const difficultyNameMap = {
+            easy: "简单",
+            medium: "中等",
+            hard: "困难"
+        };
+
+        // 初始化选择器
+        document.querySelectorAll('.option-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const type = this.dataset.type;
+                const value = this.dataset.value;
+
+                // 工具可以多选，其他单选
+                if (type === "tool") {
+                    this.classList.toggle('selected');
+                    // 更新工具列表
+                    gameData.tools = [];
+                    document.querySelectorAll('#tool-list .option-item.selected').forEach(tool => {
+                        if (gameData.tools.length < 3) {
+                            gameData.tools.push(tool.dataset.value);
+                        } else {
+                            tool.classList.remove('selected');
+                            alert("最多只能选择3个工具！");
+                        }
+                    });
+                } else {
+                    // 单选逻辑
+                    document.querySelectorAll(`[data-type="${type}"]`).forEach(i => {
+                        i.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    gameData[type] = value;
+                }
+            });
+        });
+
+        // 页面切换
+        function goToPage(pageId) {
+            document.querySelectorAll('.game-page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            // 如果切换到变卖页面，更新物品列表
+            if (pageId === "sell-page") {
+                updateInventory();
+            }
+        }
+
+        // 开始游戏
+        function startGame() {
+            // 更新游戏数据
+            gameData.hp = difficultyConfig[gameData.difficulty].hp;
+            document.getElementById('gold').textContent = gameData.gold;
+            document.getElementById('hp').textContent = gameData.hp;
+            document.getElementById('current-map').textContent = mapNameMap[gameData.map];
+            document.getElementById('current-difficulty').textContent = difficultyNameMap[gameData.difficulty];
+            
+            // 生成古墓区域
+            generateTombArea();
+            
+            // 切换到游戏页面
+            goToPage('game-page');
+        }
+
+        // 生成古墓探索区域
+        function generateTombArea() {
+            const tombArea = document.getElementById('tomb-area');
+            tombArea.innerHTML = '';
+            
+            // 根据难度生成不同数量的墓室格子
+            const cellCount = gameData.difficulty === "easy" ? 12 : (gameData.difficulty === "medium" ? 16 : 20);
+            
+            for (let i = 0; i < cellCount; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'tomb-cell';
+                cell.textContent = `墓室 ${i+1}`;
+                cell.dataset.index = i;
+                
+                // 点击探索墓室
+                cell.addEventListener('click', function() {
+                    if (this.classList.contains('found')) return;
+                    exploreCell(this);
+                });
+                
+                tombArea.appendChild(cell);
+            }
+        }
+
+        // 探索墓室格子
+        function exploreCell(cell) {
+            cell.classList.add('found');
+            
+            const difficulty = gameData.difficulty;
+            const random = Math.random();
+            let itemKey = "";
+
+            // 根据难度计算概率
+            const trapRate = difficultyConfig[difficulty].trapRate;
+            const rareRate = difficultyConfig[difficulty].rareRate;
+
+            if (random < trapRate) {
+                // 触发陷阱
+                itemKey = Math.random() > 0.5 ? "trap" : "poison";
+                gameData.hp -= itemConfig[itemKey].damage;
+                document.getElementById('hp').textContent = gameData.hp;
+                
+                // 生命值为0游戏结束
+                if (gameData.hp <= 0) {
+                    showModal("游戏结束", "你触发了致命机关，生命值耗尽！点击确定重新开始", function() {
+                        restartGame();
+                    });
+                    return;
+                }
+            } else {
+                // 找到物品
+                if (random < trapRate + rareRate) {
+                    itemKey = Math.random() > 0.5 ? "goldware" : "jade";
+                } else if (random < trapRate + rareRate + 0.3) {
+                    itemKey = "porcelain";
+                } else if (random < trapRate + rareRate + 0.6) {
+                    itemKey = "bronze";
+                } else {
+                    itemKey = "empty";
+                }
+                
+                // 添加物品到背包（非空/非陷阱）
+                if (itemKey !== "empty" && itemKey !== "trap" && itemKey !== "poison") {
+                    gameData.inventory.push({
+                        key: itemKey,
+                        name: itemConfig[itemKey].name,
+                        value: itemConfig[itemKey].value
+                    });
+                }
+            }
+
+            // 显示探索结果
+            let title = "";
+            let content = "";
+            
+            if (itemKey === "trap" || itemKey === "poison") {
+                title = "危险！";
+                content = `你触发了${itemConfig[itemKey].name}，损失${itemConfig[itemKey].damage}点生命值！剩余生命值：${gameData.hp}`;
+            } else if (itemKey === "empty") {
+                title = "空空如也";
+                content = "这个墓室里什么都没有找到...";
+            } else {
+                title = "发现宝物！";
+                content = `你找到了${itemConfig[itemKey].name}（${itemConfig[itemKey].rarity}），价值${itemConfig[itemKey].value}金币！`;
+            }
+            
+            showModal(title, content);
+        }
+
+        // 显示弹窗
+        function showModal(title, content, callback) {
+            const modal = document.getElementById('result-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').textContent = content;
+            modal.classList.add('active');
+            
+            // 覆盖关闭按钮事件
+            const closeBtn = modal.querySelector('.btn');
+            closeBtn.onclick = function() {
+                modal.classList.remove('active');
+                if (callback) callback();
+            };
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('result-modal').classList.remove('active');
+        }
+
+        // 更新物品背包
+        function updateInventory() {
+            const inventory = document.getElementById('inventory');
+            inventory.innerHTML = '';
+            
+            if (gameData.inventory.length === 0) {
+                inventory.innerHTML = '<div class="inventory-item">你的背包是空的，快去古墓探索吧！</div>';
+                return;
+            }
+            
+            gameData.inventory.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'inventory-item';
+                itemEl.innerHTML = `
+                    <div>${item.name} (价值: ${item.value}金币)</div>
+                    <button class="btn sell-btn" onclick="sellItem(${index})">变卖</button>
+                `;
+                inventory.appendChild(itemEl);
+            });
+        }
+
+        // 变卖单个物品
+        function sellItem(index) {
+            const item = gameData.inventory[index];
+            gameData.gold += item.value;
+            gameData.inventory.splice(index, 1);
+            
+            document.getElementById('gold').textContent = gameData.gold;
+            updateInventory();
+            
+            showModal("变卖成功", `你将${item.name}变卖，获得${item.value}金币！当前总金币：${gameData.gold}`);
+        }
+
+        // 全部变卖
+        function sellAllItems() {
+            if (gameData.inventory.length === 0) {
+                alert("你的背包是空的！");
+                return;
+            }
+            
+            let total = 0;
+            gameData.inventory.forEach(item => {
+                total += item.value;
+            });
+            
+            gameData.gold += total;
+            gameData.inventory = [];
+            
+            document.getElementById('gold').textContent = gameData.gold;
+            updateInventory();
+            
+            showModal("全部变卖成功", `你变卖了所有宝物，共获得${total}金币！当前总金币：${gameData.gold}`);
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            // 重置游戏数据
+            gameData = {
+                character: "doctor",
+                costume: "basic",
+                tools: ["shovel", "talisman"],
+                map: "shanxi",
+                difficulty: "easy",
+                gold: 0,
+                hp: 100,
+                inventory: []
+            };
+            
+            // 重置选择器样式
+            document.querySelectorAll('.option-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.querySelector('[data-type="character"][data-value="doctor"]').classList.add('selected');
+            document.querySelector('[data-type="costume"][data-value="basic"]').classList.add('selected');
+            document.querySelector('[data-type="map"][data-value="shanxi"]').classList.add('selected');
+            document.querySelector('[data-type="difficulty"][data-value="easy"]').classList.add('selected');
+            document.querySelectorAll('#tool-list .option-item')[0].classList.add('selected');
+            document.querySelectorAll('#tool-list .option-item')[1].classList.add('selected');
+            
+            // 回到角色选择页面
+            goToPage('character-page');
+        }
+    </script>
+</body>
+</html>

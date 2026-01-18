@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易跑酷小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(#87CEEB, #E0F6FF);
+            position: relative;
+            overflow: hidden;
+            border: 5px solid #333;
+            border-radius: 8px;
+        }
+
+        #player {
+            width: 60px;
+            height: 80px;
+            background: #FF6B6B;
+            position: absolute;
+            bottom: 0;
+            left: 100px;
+            border-radius: 8px;
+            transition: bottom 0.3s ease;
+        }
+
+        .obstacle {
+            width: 40px;
+            height: 60px;
+            background: #4CAF50;
+            position: absolute;
+            bottom: 0;
+            border-radius: 4px;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 16px;
+            border-radius: 4px;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF3333;
+            display: none;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px 60px;
+            border-radius: 10px;
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        #restart-btn:hover {
+            background: #45a049;
+        }
+
+        #instructions {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="score-board">分数: 0</div>
+        <div id="game-over">
+            游戏结束!<br>
+            <button id="restart-btn">重新开始</button>
+        </div>
+    </div>
+    <div id="instructions">
+        操作说明: 按空格键跳跃 / 躲避障碍物
+    </div>
+
+    <script>
+        // 游戏元素
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreBoard = document.getElementById('score-board');
+        const gameOver = document.getElementById('game-over');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // 游戏参数
+        let isJumping = false;
+        let gravity = 2;
+        let score = 0;
+        let obstacleInterval;
+        let gameSpeed = 5;
+        let isGameOver = false;
+
+        // 初始化游戏
+        function initGame() {
+            isJumping = false;
+            score = 0;
+            gameSpeed = 5;
+            isGameOver = false;
+            scoreBoard.textContent = `分数: ${score}`;
+            gameOver.style.display = 'none';
+            
+            // 清除现有障碍物
+            document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // 开始生成障碍物
+            obstacleInterval = setInterval(createObstacle, 1500);
+            
+            // 开始计分
+            setInterval(() => {
+                if (!isGameOver) {
+                    score++;
+                    scoreBoard.textContent = `分数: ${score}`;
+                    // 每20分提高一次游戏速度
+                    if (score % 20 === 0 && gameSpeed < 10) {
+                        gameSpeed += 0.5;
+                    }
+                }
+            }, 100);
+        }
+
+        // 玩家跳跃
+        function jump() {
+            if (isJumping || isGameOver) return;
+            
+            isJumping = true;
+            let jumpHeight = 0;
+            const jumpInterval = setInterval(() => {
+                // 上升阶段
+                if (jumpHeight < 150) {
+                    jumpHeight += 10;
+                    player.style.bottom = `${jumpHeight}px`;
+                } else {
+                    // 下降阶段
+                    clearInterval(jumpInterval);
+                    const fallInterval = setInterval(() => {
+                        if (jumpHeight > 0) {
+                            jumpHeight -= gravity;
+                            player.style.bottom = `${jumpHeight}px`;
+                        } else {
+                            clearInterval(fallInterval);
+                            isJumping = false;
+                            player.style.bottom = '0px';
+                        }
+                    }, 20);
+                }
+            }, 20);
+        }
+
+        // 创建障碍物
+        function createObstacle() {
+            if (isGameOver) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            gameContainer.appendChild(obstacle);
+            
+            // 随机障碍物位置（右侧外）
+            let obstaclePosition = 800;
+            obstacle.style.left = `${obstaclePosition}px`;
+            
+            // 移动障碍物
+            const moveInterval = setInterval(() => {
+                if (isGameOver) {
+                    clearInterval(moveInterval);
+                    return;
+                }
+                
+                obstaclePosition -= gameSpeed;
+                obstacle.style.left = `${obstaclePosition}px`;
+                
+                // 检测碰撞
+                const playerRect = player.getBoundingClientRect();
+                const obstacleRect = obstacle.getBoundingClientRect();
+                
+                if (
+                    playerRect.right > obstacleRect.left &&
+                    playerRect.left < obstacleRect.right &&
+                    playerRect.bottom > obstacleRect.top
+                ) {
+                    gameOverHandler();
+                    clearInterval(moveInterval);
+                }
+                
+                // 移除超出左侧的障碍物
+                if (obstaclePosition < -40) {
+                    clearInterval(moveInterval);
+                    obstacle.remove();
+                }
+            }, 20);
+        }
+
+        // 游戏结束处理
+        function gameOverHandler() {
+            isGameOver = true;
+            clearInterval(obstacleInterval);
+            gameOver.style.display = 'block';
+        }
+
+        // 事件监听
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                jump();
+            }
+        });
+
+        restartBtn.addEventListener('click', initGame);
+
+        // 启动游戏
+        initGame();
+    </script>
+</body>
+</html>
